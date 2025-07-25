@@ -13,36 +13,18 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="头文件\tool">
-      <UniqueIdentifier>{1096f7be-605c-4659-a3a6-89e8bc9b582e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mover.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IconPositionData.h">
+    <ClInclude Include="LogMessage.hpp">
       <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="DataManager.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="tool\EnvironmentChecker.hpp">
-      <Filter>头文件\tool</Filter>
-    </ClInclude>
-    <ClInclude Include="tool\LogMessage.hpp">
-      <Filter>头文件\tool</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IconPositionData.cpp">
+    <ClCompile Include="Dllmain.cpp">
       <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="CommandLine.hpp">
-      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

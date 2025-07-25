@@ -1,8 +1,8 @@
-#include "IconPositionData.h"
+﻿#include "IconPositionData.h"
 
 namespace ipd {
-	// @brief ���տ���
-	void Happy_birthday(BinType& location)
+	// @brief 数据集：“生日快乐”
+	void Happy_birthday(RatioPointVector& location)
 	{
 		location.push_back(pair<double, double>(4.6006390, 2.7607362));
 		location.push_back(pair<double, double>(6.6666667, 3.1358885));

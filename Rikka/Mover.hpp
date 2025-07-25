@@ -4,7 +4,8 @@
 #include <iostream>
 #include <string>
 #include "IconPositionData.h"
-#include "LogMessage.hpp"
+#include "tool/LogMessage.hpp"
+constexpr auto MAX_ICON_COUNT = 256;
 using std::wstring;
 
 // DLL 文件相对位置
@@ -13,13 +14,15 @@ constexpr auto DLL_PATH = L"\\Mover.dll";
 // -------------------------------
 // 请求命令 ID
 // -------------------------------
-constexpr auto COMMAND_MOVE_ICON = 0;
-constexpr auto COMMAND_MOVE_ICON_BY_RATE = 2;
-constexpr auto COMMAND_GET_ICON = 5;
-constexpr auto COMMAND_REFRESH_DESKTOP = 1;
-constexpr auto COMMAND_SHOW_DESKTOP = 3;
-constexpr auto COMMAND_IS_OK = 4;
-
+enum class Command : int {
+	COMMAND_MOVE_ICON = 0,
+	COMMAND_REFRESH_DESKTOP = 1,
+	COMMAND_MOVE_ICON_BY_RATE = 2,
+	COMMAND_SHOW_DESKTOP = 3,
+	COMMAND_IS_OK = 4,
+	COMMAND_GET_ICON = 5,
+	COMMAND_GET_ICON_NUMBER = 6
+};
 // @struct SharedData
 // @brief 进程间通信的共享内存数据结构
 struct SharedData
@@ -28,8 +31,9 @@ struct SharedData
 	// 共享数据区
 	// -------------------------------
 	int command;
-	IconPositionMove iconPositionMove[256];
+	IconPositionMove iconPositionMove[MAX_ICON_COUNT];
 	size_t size;
+	size_t u_j;
 
 	// -------------------------------
 	// 状态反馈区 
@@ -59,9 +63,10 @@ public:
 	Mover(LogMessage& logMessage) : logMessage(logMessage) {}
 
 	// @brief 向 explorer 注入 DLL
+	// @note 如果没有注入又找不到 DLL，就会 exit
 	bool InjectDLLEx()
 	{
-		if (this->is_injected()) return true; // 已经注入过了
+		if (this->isInjected()) return true; // 已经注入过了
 
 		// 获取explorer PID
 		DWORD pid = this->GetTargetExplorerPID();
@@ -83,6 +88,7 @@ public:
 		if (GetFileAttributes(dllPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
 			MessageBox(nullptr, L"文件缺失：Mover.dll", L"错误", MB_ICONERROR);
 			logMessage.log(L" 找不到 DLL 文件 ");
+			exit(1);
 			return false;
 		}
 
@@ -98,11 +104,11 @@ public:
 	}
 
 	// @brief 检查 DLL 是否已经注入
-	bool is_injected()
+	bool isInjected()
 	{
 		logMessage.log(L"检查 DLL 是否已经注入...");
 		SharedData* pSharedData = new SharedData;
-		pSharedData->command = COMMAND_IS_OK;
+		pSharedData->command = static_cast<int>(Command::COMMAND_IS_OK);
 
 		if (this->run(pSharedData))
 		{
@@ -122,20 +128,20 @@ public:
 	// @param is_rate 是否按比例移动，默认 false
 	// @remark	按比例移动
 	//				1. 意思就是坐标是根据屏幕分辨率，按比率计算，可实现在不同分辨率的屏幕上有相同的效果
-	// 				2. 坐标计算规则：屏幕（长/宽）除以 (（长宽）比率/1000)
-	//				3. 传进来的比率需要在使用时先*1000，而且绝对不能为 0
-	bool MoveIcon(const IconPositionMove* _iconPositionMoves, size_t size, bool is_rate = false) {
+	// 				2. 坐标计算规则：屏幕（长/宽）乘以 (（长宽）比率/100000)
+	//				3. 传进来的比率需要在使用时先*100000
+	bool MoveIcon(const IconPositionMove* _iconPositionMoves, size_t size, bool isRate = false) {
 		logMessage.log(L"准备移动 " + to_wstring(size) + L" 个图标");
 
-		// 一次最多传 256 个数据
-		if (size > 256) 
+		// 一次最多传 MAX_ICON_COUNT 个数据
+		if (size > MAX_ICON_COUNT)
 			logMessage.log(L"数目过大，将分批次处理");
 
 		bool result = true;
-		for (size_t i = 0; i < size; i += 256)
+		for (size_t i = 0; i < size; i += MAX_ICON_COUNT)
 		{
-			size_t localSize = min(size - i, (size_t)256); // 本次处理数量，不会超过 256，不会偏移
-			logMessage.log(L"第 " + to_wstring(i / 256 + 1) + L" 次处理，" + L"处理 " + to_wstring(localSize) + L" 个图标");
+			size_t localSize = min(size - i, (size_t)MAX_ICON_COUNT); // 本次处理数量，不会超过 MAX_ICON_COUNT，不会偏移
+			logMessage.log(L"第 " + to_wstring(i / MAX_ICON_COUNT + 1) + L" 次处理，" + L"处理 " + to_wstring(localSize) + L" 个图标");
 			SharedData* pSharedData = new SharedData;
 
 
@@ -144,13 +150,13 @@ public:
 				pSharedData->iconPositionMove[j] = _iconPositionMoves[i + j];
 			}
 			pSharedData->size = localSize;
-			pSharedData->command = is_rate ? COMMAND_MOVE_ICON_BY_RATE : COMMAND_MOVE_ICON;
+			pSharedData->command = isRate ? static_cast<int>(Command::COMMAND_MOVE_ICON_BY_RATE) : static_cast<int>(Command::COMMAND_MOVE_ICON);
 
 			result = this->run(pSharedData) && result; // 只要有一次处理异常，result 就是 false
 			if (pSharedData->errorNumber == 0)
 				logMessage.log(L"移动图标成功");
 			else
-				logMessage.log(L"移动图标时发生 " + to_wstring(pSharedData->errorNumber) + 
+				logMessage.log(L"移动图标时发生 " + to_wstring(pSharedData->errorNumber) +
 					L" 个错误，最后一次错误：" + wstring(pSharedData->errorMessage));
 
 
@@ -159,14 +165,49 @@ public:
 		return result;
 	}
 
+	// @brief 获取所有图标位置
+	// @param iconPositionMove 图标位置数据数组
+	// @param size iconPositionMove 大小
+	// @param maxSizeOnce 一次获取的最大数量，默认 MAX_ICON_COUNT
+	// @note size 必须大于等于图标数量，即 iconPositionMoves 必须动态分配
+	size_t GetAllIcons(IconPositionMove* iconPositionMove, size_t size, size_t maxSizeOnce = MAX_ICON_COUNT)
+	{
+		SharedData* pSharedData = new SharedData;
+		pSharedData->command = static_cast<int>(Command::COMMAND_GET_ICON);
+
+		bool result = true;
+		size_t j = 0; // 索引
+		do {
+			pSharedData->size = maxSizeOnce; // 本次获取的最大数量
+			pSharedData->u_j = j;
+
+			result = this->run(pSharedData) && result;
+			// run 之后，pSharedData->size 为实际获取的数量
+			if (!result) return 0;
+			if (j + pSharedData->size > size) return 0; // 超限
+			for (int i = 0; i < pSharedData->size; ++i)
+				iconPositionMove[j + i] = pSharedData->iconPositionMove[i];
+
+			j += pSharedData->size;
+		} while (pSharedData->size == maxSizeOnce);
+
+		/*for (int i = 0; i < j; ++i)
+		{
+			wcout << L"图标：" << iconPositionMove[i].targetName << L" 位置：" << iconPositionMove[i].newX << L"," << iconPositionMoves[i].newY << endl;
+		}*/
+
+		delete pSharedData;
+		return j;
+	}
+
 	// @brief 刷新桌面
 	bool RefreshDesktop()
 	{
 		SharedData* pSharedData = new SharedData;
-		pSharedData->command = COMMAND_REFRESH_DESKTOP;
+		pSharedData->command = static_cast<int>(Command::COMMAND_REFRESH_DESKTOP);
 
 		bool result = this->run(pSharedData);
-		if (result) 
+		if (result)
 			logMessage.log(L"刷新桌面成功");
 		else
 			logMessage.log(L"刷新桌面错误");
@@ -179,7 +220,7 @@ public:
 	bool ShowDesktop()
 	{
 		SharedData* pSharedData = new SharedData;
-		pSharedData->command = COMMAND_SHOW_DESKTOP;
+		pSharedData->command = static_cast<int>(Command::COMMAND_SHOW_DESKTOP);
 
 		bool result = this->run(pSharedData);
 		if (result)
@@ -191,11 +232,31 @@ public:
 		return result;
 	}
 
+	// @brief 获取桌面图标数量
+	size_t GetIconsNumber()
+	{
+		SharedData* pSharedData = new SharedData;
+		pSharedData->command = static_cast<int>(Command::COMMAND_GET_ICON_NUMBER);
+		if (!this->run(pSharedData))
+			return 0;
+		return pSharedData->size;
+	}
+
+	// @brief 安全的新建 IconPositionMove 数组，数组大小为桌面图标数量
+	// @ret 新建的数组，需要手动 delete[]！！
+	IconPositionMove* SafeNewIconPositionMove()
+	{
+		size_t iconNumber = this->GetIconsNumber();
+		if (iconNumber == 0)
+			return nullptr;
+		return new IconPositionMove[iconNumber];
+	}
+
 private:
 	// @brief 通过共享内存发送命令
 	// @param _pSharedData 共享内存数据
 	// @ret 是否成功。
-	// @note _pSharedData->errorNumber，_pSharedData->errorMessage 会被更新
+	// @note _pSharedData 会被更新
 	bool run(SharedData* _pSharedData) {
 		HANDLE hMapFile = OpenFileMappingW(
 			FILE_MAP_ALL_ACCESS,
@@ -215,6 +276,7 @@ private:
 			sizeof(SharedData)));
 		if (!pSharedData) {
 			DWORD err = GetLastError();
+			CloseHandle(hMapFile);
 			logMessage.log(L"无法映射共享内存视图，错误代码: " + to_wstring(err));
 			return false;
 		}
@@ -230,10 +292,10 @@ private:
 		_pSharedData->errorNumber = 0;
 		_pSharedData->errorMessage[0] = '\0';
 
-		*pSharedData = *_pSharedData; // 发送命令
+		memcpy_s(pSharedData, sizeof(SharedData), _pSharedData, sizeof(SharedData)); // 发送命令
 
 		// 检测 DLL 是否在线
-		if (_pSharedData->command == COMMAND_IS_OK)
+		if (_pSharedData->command == static_cast<int>(Command::COMMAND_IS_OK))
 		{
 			Sleep(400);
 			if (pSharedData->finished == true)
@@ -241,7 +303,7 @@ private:
 				return true;
 			}
 			else
-			{ // 不在线，同时重置状态
+			{ // 超时，不在线，同时重置状态
 				_pSharedData->finished = true;
 				_pSharedData->execute = false;
 				return false;
@@ -253,9 +315,14 @@ private:
 			Sleep(50);
 		}
 
-		// 复制状态
-		wsprintf(_pSharedData->errorMessage, pSharedData->errorMessage);
-		_pSharedData->errorNumber = pSharedData->errorNumber;
+		//// 复制状态
+		//wsprintf(_pSharedData->errorMessage, pSharedData->errorMessage);
+		//_pSharedData->errorNumber = pSharedData->errorNumber;
+		//_pSharedData->size = pSharedData->size;
+		//_pSharedData->u_j = pSharedData->u_j;
+		//memcpy_s(_pSharedData->iconPositionMove, sizeof(_pSharedData->iconPositionMove), pSharedData->iconPositionMove, sizeof(pSharedData->iconPositionMove));
+
+		memcpy_s(_pSharedData, sizeof(SharedData), pSharedData, sizeof(SharedData)); // 接受消息
 
 		UnmapViewOfFile(pSharedData);
 		CloseHandle(hMapFile);

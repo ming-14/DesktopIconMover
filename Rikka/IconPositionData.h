@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <vector>
 using namespace std;
 
@@ -13,14 +12,14 @@ struct IconPositionMove
     int newY;
 };
 
-// @typedef BinType
+// @typedef RatioPointVector
 // @brief 桌面图标位置数据（点云）（按比率）
 // @note 通用数据，记录的是比率而不是坐标
-typedef vector<pair<double, double>> BinType;
+typedef vector<pair<double, double>> RatioPointVector;
 
 // @namespace ipd
 // @brief 桌面图标位置，内置数据命名空间
 namespace ipd {
     // @brief 生日快乐
-	void Happy_birthday(BinType& location);
+	void Happy_birthday(RatioPointVector& location);
 }

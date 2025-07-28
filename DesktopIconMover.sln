@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mover", "Mover\Mover.vcxproj", "{7003F455-D4DE-40DF-AC08-668FEB1A0F34}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MoverDLL", "MoverDLL\MoverDLL.vcxproj", "{7003F455-D4DE-40DF-AC08-668FEB1A0F34}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rikka", "Rikka\Rikka.vcxproj", "{B9EC8442-F75B-4D75-9434-CAB25730A3A6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mover", "Mover\Mover.vcxproj", "{B9EC8442-F75B-4D75-9434-CAB25730A3A6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

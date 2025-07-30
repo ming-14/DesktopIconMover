@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>MoverApp</title>
+		<HTA:APPLICATION
+						 ID="MoverAppGUI"
+						 APPLICATIONNAME="MoverApp"
+						 BORDER="thin"
+						 BORDERSTYLE="normal"
+						 CAPTION="yes"
+						 ICON="shell32.dll"
+						 SCROLL="no"
+						 SHOWINTASKBAR="yes"
+						 SINGLEINSTANCE="yes"
+						 SYSMENU="yes"
+						 VERSION="1.5"
+						 WINDOWSTATE="normal">
+			<style>
+				body {
+					font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+					font-size: 18px;
+					background: #f0f0f0;
+					margin: 8px;
+					padding: 0;
+				}
+				.header {
+					background: #2c3e50;
+					color: white;
+					padding: 8px;
+					font-weight: bold;
+					text-align: center;
+					margin-bottom: 15px;
+				}
+				.container {
+					display: flex;
+					flex-direction: column;
+					max-width: 500px;
+					margin: 0 auto;
+				}
+				.form-group {
+					margin-bottom: 10px;
+					background: white;
+					padding: 10px;
+					border-radius: 4px;
+					box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+				}
+				label {
+					display: block;
+					margin-bottom: 3px;
+					font-weight: bold;
+				}
+				select, input[type="text"] {
+					width: 100%;
+					padding: 6px;
+					border: 1px solid #ddd;
+					border-radius: 3px;
+					box-sizing: border-box;
+				}
+				.output-container {
+					display: none;
+				}
+				.sort-container {
+					display: none;
+				}
+				button {
+					background: #3498db;
+					color: white;
+					border: none;
+					padding: 8px 15px;
+					border-radius: 3px;
+					cursor: pointer;
+					font-weight: bold;
+					margin-top: 10px;
+					transition: background 0.3s;
+				}
+				button:hover {
+					background: #2980b9;
+				}
+				.uninstall-btn {
+					background: #e74c3c;
+				}
+				.uninstall-btn:hover {
+					background: #c0392b;
+				}
+				.actions {
+					display: flex;
+					justify-content: space-between;
+					margin-top: 15px;
+				}
+				#outputArea {
+					background: #f8f8f8;
+					border: 1px solid #ddd;
+					padding: 10px;
+					height: 150px;
+					overflow-y: auto;
+					margin-top: 10px;
+					font-family: Consolas, monospace;
+					font-size: 11px;
+					white-space: pre;
+				}
+</style>
+	</head>
+	<body>
+		<div class="header">MoverApp - 桌面图标布局管理工具</div>
+
+		<div class="container">
+			<div class="form-group">
+				<label for="mode">操作模式：</label>
+				<select id="mode" onchange="updateFormVisibility()">
+					<option value="save">★ 保存当前图标布局 ★</option>
+					<option value="move">★ 加载布局并移动图标 ★</option>
+					<option value="save-full">保存完整图标数据</option>
+					<option value="clear">清理桌面文件</option>
+				</select>
+			</div>
+
+			<div class="form-group" id="fileGroup">
+				<label for="file">布局文件路径：</label>
+				<div style="display: flex; gap: 15px; align-items: center;">
+					<input type="text" id="file" value=".\rikka.bin"
+						style="flex-grow: 1; padding: 10px 12px; height: 36px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; transition: border 0.3s ease, box-shadow 0.3s ease;"
+						onfocus="this.style.borderColor='#3498db'; this.style.boxShadow='0 0 0 2px rgba(52, 152, 219, 0.2)'"
+						onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none';">
+					<button style="padding: 8px 18px; height: 36px; box-sizing: border-box; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.3s;" onmouseover="this.style.background='#2980b9'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#3498db'; this.style.transform='translateY(0)'"
+					onclick="document.getElementById('file').value='./rikka.bin'">默认文件路径</button>
+					<button style="padding: 8px 18px; height: 36px; box-sizing: border-box; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.3s;" onmouseover="this.style.background='#2980b9'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#3498db'; this.style.transform='translateY(0)'"
+					onclick="document.getElementById('file').value='mover::happybirthday';
+					document.getElementById('mode').value='move'; updateFormVisibility()">Data: 生快</button>
+				</div>
+			</div>
+
+			<div class="form-group output-container" id="outputGroup">
+				<label>
+					<input type="checkbox" id="output"> 输出数据到控制台
+				</label>
+			</div>
+
+			<div class="form-group sort-container" id="sortGroup">
+				<label for="sort">排序模式：</label>
+				<select id="sort">
+					<option value="X_ASC">按X坐标升序</option>
+					<option value="X_DESC">按X坐标降序</option>
+					<option value="Y_ASC">按Y坐标升序</option>
+					<option value="Y_DESC">按Y坐标降序</option>
+				</select>
+			</div>
+
+			<div class="actions">
+				<button onclick="executeCommand()">执 行</button>
+				<button class="uninstall-btn" onclick="uninstallDLL()">卸载DLL</button>
+			</div>
+
+			<div id="outputArea"></div>
+		</div>
+
+		<script>
+			window.resizeTo(700, 800);
+		</script>
+
+		<script language="VBScript">
+			' 检查必要文件否存在
+			Function CheckFilesExist()
+				Dim fso, moverExe, moverDll
+				Set fso = CreateObject("Scripting.FileSystemObject")
+				moverExe = "Mover.exe"
+				moverDll = "Agent.dll"
+				
+				If Not fso.FileExists(moverExe) Then
+					MsgBox "无法找到必要的文件：Mover.exe。" & vbCrLf & _
+					"请确保此文件与HTA应用程序在同一目录中。", vbCritical, "文件缺失"
+					Self.Close()
+				End If
+				
+				If Not fso.FileExists(moverDll) Then
+					MsgBox "无法找到必要的文件：Angent.dll。" & vbCrLf & _
+					"请确保此文件与HTA应用程序在同一目录中。", vbCritical, "文件缺失"
+					Self.Close()
+				End If
+			End Function
+
+			' 执行MoverApp命令并捕获输出
+			Function ExecuteMoverApp(args)
+				On Error Resume Next
+				Dim shell, cmd, tempFile, tempPath, fso, file, output
+				
+				Set shell = CreateObject("WScript.Shell")
+				Set fso = CreateObject("Scripting.FileSystemObject")
+				
+				' 临时文件
+				tempPath = shell.ExpandEnvironmentStrings("%TEMP%")
+				tempFile = tempPath & "\mover_output_" & Timer & ".txt"
+				
+				d_fso = CreateObject("Scripting.FileSystemObject")
+				d_fso.DeleteFile(tempFile)
+				
+				' 构建完整的命令
+				cmd = "cmd /c Mover.exe " & args & " > " & tempFile & " 2>&1"
+				
+				' 执行命令
+				shell.Run cmd, 0, True
+				
+				' 读取临时文件内容
+				If fso.FileExists(tempFile) Then
+					Set file = fso.OpenTextFile(tempFile, 1)
+					output = file.ReadAll
+					file.Close
+					fso.DeleteFile(tempFile)
+				Else
+					output = "无法读取命令输出。请检查命令是否执行成功。"
+				End If
+				
+				ExecuteMoverApp = output
+			End Function
+
+			' 卸载DLL
+			Sub uninstallDLL()
+				document.getElementById("outputArea").innerText = "正在卸载DLL..."
+				Dim result
+				result = ExecuteMoverApp("--inject=unset")
+				document.getElementById("outputArea").innerText = result
+			End Sub
+
+			' 执行命令
+			Sub executeCommand()
+				Dim mode, file, output, sort, args, result
+				
+				' 获取表单值
+				mode = document.getElementById("mode").value
+				file = document.getElementById("file").value
+				output = document.getElementById("output").checked
+				sort = document.getElementById("sort").value
+				
+				If mode <> "move" And Left(file, 7) = "mover::" Then
+					document.getElementById("outputArea").innerText = "请输入文件（比如 ./rikka.bin ）"
+					Exit Sub
+				End If
+
+				' 构建参数
+				args = "--mode=" & mode & " --no-footprint"
+				
+				' 添加文件参数（除clear和clearlog外）
+				If mode <> "clear" And mode <> "clearlog" Then
+					args = args & " --file=" & file
+				End If
+				
+				' 添加输出参数（save/save-full模式）
+				If (mode = "save" Or mode = "save-full") And output Then
+					args = args & " --output"
+				End If
+				
+				' 添加排序参数（sort模式）
+				If mode = "sort" Then
+					args = args & " --sort=" & sort
+				End If
+				
+				document.getElementById("outputArea").innerText = "正在执行命令: mover.exe " & args
+				result = ExecuteMoverApp(args)
+				document.getElementById("outputArea").innerText = result
+			End Sub
+
+			' 页面加载时检查文件
+			Sub Window_OnLoad()
+				CheckFilesExist
+				updateFormVisibility ' 初始化表单可见性
+			End Sub
+		</script>
+
+		<script language="JavaScript">
+			// 根据选择的模式更新表单可见性
+			function updateFormVisibility() {
+				var mode = document.getElementById("mode")
+					.value;
+				var outputGroup = document.getElementById("outputGroup");
+				var sortGroup = document.getElementById("sortGroup");
+				var fileGroup = document.getElementById("fileGroup");
+
+				// 显示/隐藏文件组（除clear和clearlog外）
+				if (mode === "clear" || mode === "clearlog") {
+					fileGroup.style.display = "none";
+				} else {
+					fileGroup.style.display = "block";
+				}
+
+				// 显示/隐藏输出组（save/save-full模式）
+				if (mode === "save" || mode === "save-full") {
+					outputGroup.style.display = "block";
+				} else {
+					outputGroup.style.display = "none";
+				}
+
+				// 显示/隐藏排序组（sort模式）
+				if (mode === "sort") {
+					sortGroup.style.display = "block";
+				} else {
+					sortGroup.style.display = "none";
+				}
+			}
+		</script>
+	</body>
+</html>
